@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI SC Structure</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#ffffff;color:#1a1a1a}
+.top-controls{display:flex;align-items:center;gap:12px;padding:12px 16px 12px;flex-wrap:wrap;border-bottom:1px solid #e8e8e8}
+.diagram-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:600;color:#1a1a1a}
+.ctrl-btn{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;border:0.5px solid #ccc;background:transparent;color:#666;cursor:pointer;transition:background .1s}
+.ctrl-btn:hover{background:#f5f5f5}
+.tree-outer{padding:16px 16px 32px;position:relative;width:100%;overflow:hidden}
+.tree-scale-wrap{transform-origin:top center}
+.node{border-radius:10px;border:1.5px solid transparent;cursor:pointer;transition:opacity .13s;text-align:left}
+.node:hover{opacity:.82}
+.node.dimmed{opacity:.2}
+.node-label{font-weight:600;line-height:1.35;word-break:break-word;white-space:normal}
+.node-badge{display:inline-block;font-weight:700;border-radius:99px;opacity:.75;margin-top:4px;white-space:nowrap}
+.tooltip{pointer-events:none;position:fixed;z-index:99999;width:270px;border-radius:10px;padding:11px 14px;border:1px solid #d0d0d0;background:#ffffff;box-shadow:0 4px 16px rgba(0,0,0,0.10);opacity:0;transition:opacity .15s;font-family:'Plus Jakarta Sans',sans-serif}
+.tooltip.visible{opacity:1}
+.tt-title{font-size:13px;font-weight:600;margin-bottom:5px;color:#1a1a1a;word-break:break-word}
+.tt-row{display:flex;gap:5px;margin-top:4px;align-items:flex-start}
+.tt-icon{font-size:11px;flex-shrink:0;margin-top:1px;color:#666}
+.tt-text{font-size:11px;line-height:1.5;color:#444;word-break:break-word}
+.tt-note{font-size:11px;font-style:italic;color:#777;margin-top:3px;word-break:break-word}
+.tt-divider{height:0.5px;margin:6px 0;background:#e0e0e0}
+.tt-hint{font-size:11px;color:#888;margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="top-controls">
+  <span class="diagram-title">AI SC Structure</span>
+  <button class="ctrl-btn" id="btnAll" onclick="toggleAll()">Expand all</button>
+  <button class="ctrl-btn" onclick="clearSel()">Clear selection</button>
+</div>
+<div class="tree-outer" id="outer">
+  <svg id="svg-lines" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:0"></svg>
+  <div id="scale-wrap" class="tree-scale-wrap" style="width:100%;display:flex;justify-content:center">
+    <div id="tc" style="display:inline-block"></div>
+  </div>
+</div>
+<div class="tooltip" id="tt"></div>
+
+<script>
+const PAL=[
+  {bg:'#EEEDFE',border:'#7F77DD',text:'#26215C',line:'#7F77DD'},
+  {bg:'#E6F1FB',border:'#378ADD',text:'#042C53',line:'#378ADD'},
+  {bg:'#E1F5EE',border:'#1D9E75',text:'#04342C',line:'#1D9E75'},
+  {bg:'#FAEEDA',border:'#BA7517',text:'#412402',line:'#BA7517'},
+  {bg:'#FAECE7',border:'#D85A30',text:'#4A1B0C',line:'#D85A30'},
+];
+function pal(d){return PAL[Math.min(d,PAL.length-1)]}
+
+function folderSVG(color,open,leaf){
+  if(leaf)return`<svg width="18" height="21" viewBox="0 0 13 15" fill="none"><rect x=".5" y=".5" width="12" height="14" rx="1.5" fill="${color}" opacity=".2" stroke="${color}" stroke-width="1"/><path d="M7.5.5v4h4" stroke="${color}" stroke-width=".9" stroke-linecap="round" fill="none"/><line x1="2.5" y1="8" x2="10.5" y2="8" stroke="${color}" stroke-width=".9" stroke-linecap="round"/><line x1="2.5" y1="10.5" x2="10.5" y2="10.5" stroke="${color}" stroke-width=".9" stroke-linecap="round"/><line x1="2.5" y1="13" x2="7.5" y2="13" stroke="${color}" stroke-width=".9" stroke-linecap="round"/></svg>`;
+  const fo=open?.35:.18,to=open?.65:.4;
+  return`<svg width="21" height="18" viewBox="0 0 15 13" fill="none"><rect x=".5" y="3" width="14" height="9.5" rx="1.5" fill="${color}" opacity="${fo}" stroke="${color}" stroke-width="1"/><path d="M.5 5.5C.5 4.4 1.4 3.5 2.5 3.5H6L7.5 2h5C13.6 2 14.5 2.9 14.5 4v1.5H.5Z" fill="${color}" opacity="${to}"/><rect x=".5" y="3" width="14" height="9.5" rx="1.5" stroke="${color}" stroke-width="1" fill="none"/></svg>`;
+}
+
+const TREE={label:"AI SC Structure",filter:"Not deleted · Functional Group = Systems · Department = AI · AI SCF? = Yes",children:[
+  {label:"07.00  Committee Governance",filter:"By Functional Group = Systems · Department = AI · AI SCF? = Yes",children:[
+    {label:"Operating Procedures",leaf:true,filter:"Class = Procedures"},
+    {label:"Policies",leaf:true,filter:"Class = Policies"},
+    {label:"Processes",leaf:true,filter:"Class = Processes"},
+    {label:"Quick Reference Guides",leaf:true,filter:"Class = Quick Reference Guides"},
+    {label:"Templates",leaf:true,filter:"Class = Templates"},
+    {label:"Terms of Reference",leaf:true,filter:"Class = Terms of Reference",note:"Grouped by Terms of Reference Type"},
+    {label:"Work Instructions",leaf:true,filter:"Class = Work Instructions"},
+  ]},
+  {label:"07.01  Meeting Materials",filter:"Class one of: Action Items; Meeting Minutes Agenda; Meeting Recordings; Presentations",note:"Sorted by Year & Month (Date); Date",children:[
+    {label:"Create Agenda",leaf:true,filter:"Not deleted · Class = Meeting Minutes Agenda · Type = Agenda",note:"Action button"},
+    {label:"[Date]",leaf:true,filter:"Dynamic grouping by date"},
+    {label:"Agenda",leaf:true,filter:"Class = Meeting Minutes Agendas · Type = Agenda"},
+    {label:"Minutes – Drafts",leaf:true,filter:"Type = Minutes · Status: Draft / In Review / Not Approved"},
+    {label:"Minutes – Approved",leaf:true,filter:"Type = Minutes · Status: Approved / Issued / Published"},
+    {label:"Actions",leaf:true,filter:"Class = Action Items"},
+    {label:"Presentations",leaf:true,filter:"Class = Presentations"},
+    {label:"Recordings",leaf:true,filter:"Class = Meeting Recordings"},
+  ]},
+  {label:"07.02  Project Pipeline",filter:"By Functional Group = Systems · Department = AI · AI SCF? = Yes",note:"Status filter omitted",children:[
+    {label:"07.02.01  All Projects",leaf:true,filter:"Class = AI Projects",note:"Management overview"},
+    {label:"07.02.02  Project Intake",filter:"AI Project Phase = 1. Intake",children:[
+      {label:"Create Project Intake",leaf:true,filter:"Class = AI Project Intake · Is Template = Yes",note:"Action button"},
+      {label:"Budget & Resource Plans",leaf:true,filter:"Class = Budget Forecast and Actual"},
+      {label:"[AI Project]",leaf:true,filter:"Dynamic grouping by AI Project"},
+      {label:"Project Initialization",leaf:true,filter:"Class = AI Project Intake"},
+      {label:"Business Case",leaf:true,filter:"Class = Business Case"},
+      {label:"Assessments",filter:"Class = Assessments",children:[
+        {label:"Compliance",leaf:true,filter:"Assessment Type = Compliance"},
+        {label:"Risk",leaf:true,filter:"Assessment Type = Risk"},
+        {label:"Ethical Impact",leaf:true,filter:"Assessment Type = Ethical Impact"},
+        {label:"Privacy",leaf:true,filter:"Assessment Type = Privacy"},
+      ]},
+    ]},
+    {label:"07.02.03  Approved Projects",filter:"AI Project Phase: 2. Planning – 5. Deployment",children:[
+      {label:"[AI Project]",leaf:true,filter:"Dynamic grouping by AI Project"},
+      {label:"Project Charter",leaf:true,filter:"Class = Project Charter"},
+      {label:"Status Reports",leaf:true,filter:"Class = Reports · Report Type = Status"},
+      {label:"Documents by Class",leaf:true,filter:"Grouped by: Class"},
+    ]},
+    {label:"07.02.04  Completed Projects",filter:"AI Project Phase: 6. Monitoring – 7. Retirement",note:"Content TBD",children:[
+      {label:"[AI Project]",leaf:true,filter:"Dynamic grouping by AI Project"},
+      {label:"Documents by Class",leaf:true,filter:"Grouped by: Class"},
+    ]},
+    {label:"07.02.05  Records by Stage",leaf:true,filter:"Grouped by: AI Project Phase; Class",note:"Cross-stage records view"},
+  ]},
+  {label:"07.03  Strategic Planning",filter:"AI SCF? = Yes · By Functional Group = Systems · Department = AI",children:[
+    {label:"AI Portfolio Dashboard",leaf:true,filter:"Class = Reports · Type = AI Projects Dashboard"},
+    {label:"OpU Maturity / AI Maturity Matrix",leaf:true,filter:"Class = Reports · Type = AI Maturity Assessments",note:"Consider shortening name"},
+    {label:"Plans",leaf:true,filter:"Class = Plans · Plan Type = Strategic"},
+    {label:"Quarterly Reviews",leaf:true,filter:"Class = Periodic Reviews · Period = Quarterly",note:"Or Reports class — TBD"},
+  ]},
+  {label:"07.04  Reference Materials",filter:"AI SCF? = Yes · Department = AI · By Functional Group = Systems",children:[
+    {label:"Case Studies",leaf:true,filter:"Class = Case Studies"},
+    {label:"Industry Best Practices",leaf:true,filter:"Class = Best Practices"},
+    {label:"Training Materials",leaf:true,filter:"Class = Training Materials"},
+  ]},
+  {label:"07.05  Committee Administration",children:[
+    {label:"Action Items Master List",leaf:true,filter:"Class = Action Items · By Functional Group = Systems · Department = AI",note:"Check: same class as Actions in 07.01?"},
+    {label:"Contact Directory",leaf:true,filter:"Class = Person · AI Member Type is not empty",note:"Unrestricted — SL8 lockdown via AI boolean"},
+    {label:"Meeting Schedule",leaf:true,filter:"Class = Meeting Minutes · Type = Agenda · Days From (Date) ≥ 0",note:"Consider new object type: Meetings"},
+  ]},
+]};
+
+let expandedIds=new Set(),selectedId=null,allExpanded=false,idCtr=0,currentScale=1;
+const nodeEls=new Map();
+
+function assignIds(n){n._id='n'+(idCtr++);if(n.children)n.children.forEach(assignIds);}
+assignIds(TREE);
+
+function getAllFolderIds(n){const ids=[];if(n.children&&n.children.length){ids.push(n._id);n.children.forEach(c=>ids.push(...getAllFolderIds(c)));}return ids;}
+function findNode(id,n){if(n._id===id)return n;if(n.children)for(const c of n.children){const r=findNode(id,c);if(r)return r;}return null;}
+function getDescIds(n){const ids=[n._id];if(n.children)n.children.forEach(c=>ids.push(...getDescIds(c)));return ids;}
+function getAncs(target,n,path=[]){if(n._id===target)return[...path,n._id];if(n.children)for(const c of n.children){const r=getAncs(target,c,[...path,n._id]);if(r)return r;}return null;}
+function collapseAll(n){expandedIds.delete(n._id);if(n.children)n.children.forEach(collapseAll);}
+
+const tt=document.getElementById('tt');
+let ttTO;
+function showTT(node,depth,el){
+  clearTimeout(ttTO);
+  const hasC=node.children&&node.children.length>0;
+  const parts=node.filter?node.filter.split('·'):[];
+  let h=`<div class="tt-title">${node.leaf||!hasC?'📄 ':'📁 '}${node.label}</div><div class="tt-divider"></div>`;
+  if(node.filter){h+=`<div class="tt-row"><span class="tt-icon">⚙</span><div>`;parts.forEach(pt=>{h+=`<div class="tt-text">${pt.trim()}</div>`;});h+=`</div></div>`;}
+  if(node.note)h+=`<div class="tt-row"><span class="tt-icon">↳</span><div class="tt-note">${node.note}</div></div>`;
+  if(hasC)h+=`<div class="tt-divider"></div><div class="tt-hint">${node.children.length} item${node.children.length!==1?'s':''} · click to ${expandedIds.has(node._id)?'collapse':'expand'}</div>`;
+  tt.innerHTML=h;
+  const er=el.getBoundingClientRect();
+  let lft=er.right+10,top=er.top;
+  tt.style.left=lft+'px';tt.style.top=top+'px';tt.style.opacity='0';tt.classList.add('visible');
+  requestAnimationFrame(()=>{
+    const tw=tt.offsetWidth,th=tt.offsetHeight,vw=window.innerWidth,vh=window.innerHeight;
+    if(lft+tw>vw-8)lft=er.left-tw-10;
+    if(lft<4)lft=4;
+    if(top+th>vh-8)top=vh-th-8;
+    if(top<4)top=4;
+    tt.style.left=lft+'px';tt.style.top=top+'px';tt.style.opacity='1';
+  });
+}
+function hideTT(){ttTO=setTimeout(()=>tt.classList.remove('visible'),150);}
+
+function getSizes(){
+  const ow=document.getElementById('outer').getBoundingClientRect().width;
+  const factor=Math.min(1,ow/900);
+  return{
+    w0:Math.round(220+factor*80),
+    w1:Math.round(200+factor*70),
+    w2:Math.round(190+factor*60),
+    fs:Math.round(13+factor*3),
+    pad:`${Math.round(12+factor*6)}px ${Math.round(14+factor*6)}px`,
+    gap1:Math.round(14+factor*20),
+    gap2:Math.round(6+factor*4),
+    rowGap:Math.round(32+factor*16),
+    colGap:Math.round(22+factor*10),
+    badgeFs:Math.round(10+factor*2),
+  };
+}
+
+let SZ={};
+
+function buildNodeEl(node,depth){
+  const p=pal(depth);
+  const hasC=node.children&&node.children.length>0;
+  const isOpen=expandedIds.has(node._id);
+  const isLeaf=node.leaf||!hasC;
+  let dimStyle='',selStyle='';
+  if(selectedId){
+    const ancs=getAncs(selectedId,TREE)||[];
+    const descs=getDescIds(findNode(selectedId,TREE)||{_id:''});
+    const rel=new Set([...ancs,...descs]);
+    if(!rel.has(node._id))dimStyle='opacity:.2;';
+    if(node._id===selectedId)selStyle='border-width:2px;';
+  }
+  const w=depth===0?SZ.w0:depth===1?SZ.w1:SZ.w2;
+  const el=document.createElement('div');
+  el.className='node'+(dimStyle?' dimmed':'');
+  el.style.cssText=`background:${p.bg};border-color:${p.border};padding:${SZ.pad};width:${w}px;${dimStyle}${selStyle}`;
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;align-items:flex-start;gap:8px;width:100%';
+  const icon=document.createElement('span');
+  icon.innerHTML=folderSVG(p.border,isOpen,isLeaf);
+  icon.style.cssText='flex-shrink:0;margin-top:2px';
+  row.appendChild(icon);
+  const txt=document.createElement('div');
+  txt.style.cssText='flex:1;min-width:0';
+  const lbl=document.createElement('div');
+  lbl.className='node-label';
+  lbl.style.cssText=`color:${p.text};font-size:${SZ.fs}px`;
+  lbl.textContent=node.label;
+  txt.appendChild(lbl);
+  if(hasC){
+    const b=document.createElement('div');
+    b.className='node-badge';
+    b.style.cssText=`background:${p.border};color:${p.text};font-size:${SZ.badgeFs}px;padding:2px 7px`;
+    b.textContent=node.children.length+' items';
+    txt.appendChild(b);
+  }
+  row.appendChild(txt);el.appendChild(row);
+  el.addEventListener('mouseenter',()=>showTT(node,depth,el));
+  el.addEventListener('mouseleave',hideTT);
+  el.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(hasC){if(expandedIds.has(node._id))collapseAll(node);else expandedIds.add(node._id);}
+    selectedId=selectedId===node._id?null:node._id;
+    render();
+  });
+  nodeEls.set(node._id,el);
+  return el;
+}
+
+function buildTree(node,depth){
+  const hasC=node.children&&node.children.length>0;
+  const isOpen=expandedIds.has(node._id);
+  const nodeEl=buildNodeEl(node,depth);
+  if(depth===0){
+    const wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;align-items:center';
+    wrap.appendChild(nodeEl);
+    if(hasC&&isOpen){
+      const childRow=document.createElement('div');
+      childRow.style.cssText=`display:flex;flex-direction:row;align-items:flex-start;gap:${SZ.gap1}px;margin-top:${SZ.rowGap}px`;
+      node.children.forEach(c=>childRow.appendChild(buildTree(c,1)));
+      wrap.appendChild(childRow);
+    }
+    return wrap;
+  }
+  if(depth===1){
+    const wrap=document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;align-items:center';
+    wrap.appendChild(nodeEl);
+    if(hasC&&isOpen){
+      const childCol=document.createElement('div');
+      childCol.style.cssText=`display:flex;flex-direction:column;align-items:stretch;gap:${SZ.gap2}px;margin-top:${SZ.colGap}px;width:${SZ.w2}px`;
+      node.children.forEach(c=>childCol.appendChild(buildTree(c,2)));
+      wrap.appendChild(childCol);
+    }
+    return wrap;
+  }
+  const p=pal(depth);
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-direction:column';
+  wrap.appendChild(nodeEl);
+  if(hasC&&isOpen){
+    const childCol=document.createElement('div');
+    childCol.style.cssText=`border-left:2px solid ${p.line};margin-left:14px;padding-left:10px;margin-top:5px;display:flex;flex-direction:column;gap:5px`;
+    node.children.forEach(c=>childCol.appendChild(buildTree(c,depth+1)));
+    wrap.appendChild(childCol);
+  }
+  return wrap;
+}
+
+function drawLines(){
+  const svg=document.getElementById('svg-lines');
+  svg.innerHTML='';
+  const base=document.getElementById('outer').getBoundingClientRect();
+  function drawFan(node,depth){
+    if(!expandedIds.has(node._id)||!node.children||!node.children.length)return;
+    if(depth>=1)return;
+    const p=pal(depth);
+    const parentEl=nodeEls.get(node._id);
+    if(!parentEl)return;
+    const pr=parentEl.getBoundingClientRect();
+    const px=(pr.left+pr.right)/2-base.left;
+    const py=pr.bottom-base.top;
+    const mids=[];
+    node.children.forEach(child=>{
+      const cel=nodeEls.get(child._id);
+      if(!cel)return;
+      const cr=cel.getBoundingClientRect();
+      mids.push({x:(cr.left+cr.right)/2-base.left,y:cr.top-base.top});
+    });
+    if(!mids.length)return;
+    const midY=py+18*currentScale;
+    const mk=(x1,y1,x2,y2)=>{
+      const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);
+      l.setAttribute('stroke',p.line);l.setAttribute('stroke-width',Math.max(1,1.5*currentScale));
+      l.setAttribute('stroke-linecap','round');svg.appendChild(l);
+    };
+    mk(px,py,px,midY);
+    if(mids.length>1)mk(Math.min(...mids.map(m=>m.x)),midY,Math.max(...mids.map(m=>m.x)),midY);
+    mids.forEach(m=>mk(m.x,midY,m.x,m.y));
+    node.children.forEach(c=>drawFan(c,depth+1));
+  }
+  if(expandedIds.has(TREE._id)){
+    TREE.children.forEach(section=>{
+      if(!expandedIds.has(section._id)||!section.children||!section.children.length)return;
+      const p=pal(1);
+      const sEl=nodeEls.get(section._id);
+      const firstEl=nodeEls.get(section.children[0]._id);
+      if(!sEl||!firstEl)return;
+      const sr=sEl.getBoundingClientRect();
+      const fr=firstEl.getBoundingClientRect();
+      const x=(sr.left+sr.right)/2-base.left;
+      const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',x);l.setAttribute('y1',sr.bottom-base.top);l.setAttribute('x2',x);l.setAttribute('y2',fr.top-base.top);
+      l.setAttribute('stroke',p.line);l.setAttribute('stroke-width',Math.max(1,1.5*currentScale));
+      l.setAttribute('stroke-linecap','round');svg.appendChild(l);
+    });
+  }
+  drawFan(TREE,0);
+}
+
+function applyScale(){
+  const tc=document.getElementById('tc');
+  const sw=document.getElementById('scale-wrap');
+  const outerW=document.getElementById('outer').getBoundingClientRect().width-32;
+  sw.style.transform='none';sw.style.width='max-content';
+  const naturalW=tc.getBoundingClientRect().width;
+  const scale=naturalW>outerW?Math.max(0.35,outerW/naturalW):1;
+  currentScale=scale;
+  if(scale<1){sw.style.transform=`scale(${scale})`;sw.style.transformOrigin='top center';sw.style.width='100%';}
+  else{sw.style.transform='none';sw.style.width='100%';}
+  document.getElementById('outer').style.height=(tc.getBoundingClientRect().height*scale+48)+'px';
+}
+
+function render(){
+  SZ=getSizes();
+  nodeEls.clear();tt.classList.remove('visible');
+  const tc=document.getElementById('tc');tc.innerHTML='';
+  const sw=document.getElementById('scale-wrap');sw.style.transform='none';
+  tc.appendChild(buildTree(TREE,0));
+  requestAnimationFrame(()=>{applyScale();requestAnimationFrame(drawLines);});
+}
+
+function toggleAll(){
+  allExpanded=!allExpanded;
+  if(allExpanded)getAllFolderIds(TREE).forEach(id=>expandedIds.add(id));
+  else{expandedIds.clear();selectedId=null;}
+  document.getElementById('btnAll').textContent=allExpanded?'Collapse all':'Expand all';
+  render();
+}
+function clearSel(){selectedId=null;render();}
+
+expandedIds.add(TREE._id);
+render();
+let rTO;
+window.addEventListener('resize',()=>{clearTimeout(rTO);rTO=setTimeout(render,100);});
+</script>
+</body>
+</html>
